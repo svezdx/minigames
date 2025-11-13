@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎮 Game Hub</title>
+<style>
+/* ==== Общий фон и анимация ==== */
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(120deg, #4f46e5, #1e1b4b);
+}
+
+.background {
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, #3b82f6 10%, transparent 10.01%),
+              radial-gradient(circle, #6366f1 10%, transparent 10.01%);
+  background-size: 10% 10%;
+  animation: moveBg 25s linear infinite;
+  z-index: -1;
+  opacity: 0.2;
+}
+
+@keyframes moveBg {
+  0% { transform: translate(0,0); }
+  100% { transform: translate(-10%, -10%); }
+}
+
+/* ==== Заголовок ==== */
+h1 {
+  font-size: 3em;
+  text-shadow: 0 0 25px #60a5fa;
+  margin: 30px 0 20px;
+  text-align: center;
+}
+
+/* ==== Панель профиля ==== */
+.profile-panel {
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  padding: 25px 35px;
+  box-shadow: 0 0 40px rgba(0,0,0,0.4);
+  margin-bottom: 30px;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transition: transform 0.3s;
+}
+.profile-panel:hover { transform: translateY(-5px); }
+
+/* ==== Инпуты ==== */
+input {
+  width: 80%;
+  padding: 10px;
+  border-radius: 12px;
+  border: none;
+  text-align: center;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+input:focus { outline: none; box-shadow: 0 0 12px #facc15; }
+
+/* ==== Кнопки ==== */
+button, .btn {
+  background: linear-gradient(135deg,#facc15,#f59e0b);
+  border: none;
+  border-radius: 20px;
+  padding: 12px 28px;
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #1e1b4b;
+  cursor: pointer;
+  box-shadow: 0 0 25px rgba(255,255,255,0.3);
+  transition: all 0.3s ease;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+}
+button:hover, .btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 35px rgba(255,255,255,0.6);
+}
+button::before, .btn::before {
+  content: '';
+  position: absolute;
+  left: -100%;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255,255,255,0.2);
+  transition: left 0.4s;
+}
+button:hover::before, .btn:hover::before { left: 100%; }
+
+/* ==== Меню игр ==== */
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 300px;
+  align-items: center;
+}
+.menu a.btn { width: 100%; display: block; }
+.menu .path { font-size: 0.8em; color: #fff; opacity: 0.7; display: block; margin-top: 3px; text-align: center; }
+
+/* ==== Список друзей ==== */
+#friendsList { text-align: center; margin-top: 5px; font-size: 0.95em; color: #facc15; }
+</style>
+</head>
+<body>
+
+<div class="background"></div>
+
+<h1>🎮 Game Hub</h1>
+
+<!-- ==== Профиль ==== -->
+<div class="profile-panel">
+  <h2>👤 Профиль</h2>
+  <input id="username" placeholder="Введите имя">
+  <input id="password" type="password" placeholder="Введите пароль">
+  <div class="buttons">
+    <button id="registerBtn">Создать профиль</button>
+    <button id="loginBtn">Войти</button>
+  </div>
+  <p id="userID"></p>
+  <p id="balance">Баланс: 0</p>
+
+  <h3>Добавить друга по UID</h3>
+  <input id="friendUID" placeholder="UID друга">
+  <button id="addFriendBtn">Добавить друга</button>
+  <p id="friendsList">Друзья: нет</p>
+</div>
+
+<!-- ==== Меню игр ==== -->
+<h2>🎮 Игры</h2>
+<div class="menu">
+  <a href="coin.html" class="btn">🪙 Орёл или Решка<br><span class="path">zxc.html</span></a>
+  <a href="wheel.html" class="btn">🎡 Колесо Фортуны<br><span class="path">wheel.html</span></a>
+  <a href="index.html" class="btn">👤 Профиль<br><span class="path">index.html</span></a>
+</div>
+
+<!-- ==== JS ==== -->
+<script>
+let currentUID = null;
+
+// Регистрация
+document.getElementById('registerBtn').addEventListener('click', async () => {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+  if(!username || !password){ alert('Введите имя и пароль!'); return; }
+
+  const res = await fetch('/api/register', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({username,password})
+  });
+  const data = await res.json();
+  if(data.error){ alert(data.error); return; }
+  currentUID = data.uid;
+  document.getElementById('userID').textContent = `Ваш UID: ${data.uid}`;
+  document.getElementById('balance').textContent = `Баланс: ${data.balance}`;
+  loadFriends();
+});
+
+// Вход
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+  if(!username || !password){ alert('Введите имя и пароль!'); return; }
+
+  const res = await fetch('/api/login', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({username,password})
+  });
+  const data = await res.json();
+  if(data.error){ alert(data.error); return; }
+  currentUID = data.uid;
+  document.getElementById('userID').textContent = `Ваш UID: ${data.uid}`;
+  document.getElementById('balance').textContent = `Баланс: ${data.balance}`;
+  loadFriends();
+});
+
+// Добавление друга
+document.getElementById('addFriendBtn').addEventListener('click', async () => {
+  if(!currentUID){ alert('Сначала создайте профиль или войдите!'); return; }
+  const friendUID = document.getElementById('friendUID').value.trim();
+  if(!friendUID){ alert('Введите UID друга!'); return; }
+
+  const res = await fetch(`/api/user/${currentUID}/addFriend`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({friendUID})
+  });
+  await res.json();
+  loadFriends();
+});
+
+// Загрузка друзей
+async function loadFriends(){
+  if(!currentUID) return;
+  const res = await fetch(`/api/user/${currentUID}`);
+  const data = await res.json();
+  document.getElementById('friendsList').textContent = 'Друзья: ' + (data.friends.length ? data.friends.join(', ') : 'нет');
+}
+</script>
+
+</body>
+</html>
